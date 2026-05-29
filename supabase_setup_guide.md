@@ -33,6 +33,18 @@ We have created a full schema file for you at [schema.sql](file:///c:/Users/hp/D
 4. Click **Run** (or press `Cmd + Enter` / `Ctrl + Enter`).
 5. Ensure the query runs successfully with no errors.
 
+### Add or change tables
+
+**In the app (recommended):** Log in to **Admin** → **Tables & QR** → enter a table number → **Add Table**. Active tables appear on the home page with QR codes.
+
+**In Supabase SQL Editor:**
+
+```sql
+INSERT INTO restaurant_tables (table_number, status) VALUES (6, 'active');
+```
+
+Table numbers must be unique. Customers use `/table/6` (or your deployed link + `/table/6`).
+
 ### Kitchen / order tracking not syncing?
 If phone orders do not appear on `/kitchen`, or the customer status page stays on **placed** after the kitchen updates an order, run [supabase_fix_kitchen_tracking.sql](file:///c:/Users/hp/Documents/Projects/supabase_fix_kitchen_tracking.sql) in the SQL Editor. The kitchen board does not use employee login, so extra RLS policies are required.
 

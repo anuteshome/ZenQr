@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { createClient } from '@/utils/supabase/client';
 import { getQrImageUrl, getTableMenuUrl } from '@/utils/siteUrl';
 import { 
   ChefHat, 
@@ -23,7 +24,8 @@ import Link from 'next/link';
 export default function Home() {
   const { language, setLanguage, t } = useLanguage();
 
-  const tables = [1, 2, 3, 4, 5];
+  const [tables, setTables] = useState<number[]>([]);
+  const [tablesLoading, setTablesLoading] = useState(true);
 
   const [selectedTableForQr, setSelectedTableForQr] = useState<number | null>(null);
   const [siteOrigin, setSiteOrigin] = useState('');
@@ -31,6 +33,22 @@ export default function Home() {
 
   useEffect(() => {
     setSiteOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data, error } = await supabase
+        .from('restaurant_tables')
+        .select('table_number')
+        .eq('status', 'active')
+        .order('table_number', { ascending: true });
+
+      if (!error && data?.length) {
+        setTables(data.map((row) => row.table_number));
+      }
+      setTablesLoading(false);
+    })();
   }, []);
 
   const getMenuLink = (tableNum: number) => getTableMenuUrl(tableNum, siteOrigin || undefined);
@@ -97,7 +115,19 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {tablesLoading ? (
+              <div className="col-span-full flex justify-center py-8">
+                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+              </div>
+            ) : tables.length === 0 ? (
+              <p className="col-span-full text-center text-xs text-slate-500 py-6">
+                {t(
+                  'No tables yet. Log in to Admin → Tables to add tables, or run seed.sql in Supabase.',
+                  'ጠረጴዛዎች የሉም። በ Admin → Tables ይጨምሩ ወይም በ Supabase ውስጥ seed.sql ያስገቡ።'
+                )}
+              </p>
+            ) : null}
             {tables.map((tableNum) => (
               <div
                 key={tableNum}

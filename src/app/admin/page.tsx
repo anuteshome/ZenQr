@@ -10,6 +10,7 @@ import {
   BookOpen,
   Users,
   Package,
+  LayoutGrid,
   Plus,
   Edit,
   Trash2,
@@ -56,6 +57,13 @@ interface MenuItem {
   is_available: boolean;
 }
 
+interface RestaurantTable {
+  id: string;
+  table_number: number;
+  status: 'active' | 'inactive';
+  created_at: string;
+}
+
 interface InventoryItem {
   id: string;
   item_name_en: string;
@@ -85,9 +93,13 @@ export default function AdminDashboard() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'menu' | 'employees' | 'inventory'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'tables' | 'categories' | 'menu' | 'employees' | 'inventory'
+  >('overview');
 
   // Data States
+  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([]);
+  const [newTableNumber, setNewTableNumber] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -183,13 +195,78 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     setDataLoading(true);
     await Promise.all([
+      fetchRestaurantTables(),
       fetchCategories(),
       fetchMenuItems(),
       fetchEmployees(),
       fetchInventory(),
-      fetchOverviewStats()
+      fetchOverviewStats(),
     ]);
     setDataLoading(false);
+  };
+
+  const fetchRestaurantTables = async () => {
+    const { data } = await supabase
+      .from('restaurant_tables')
+      .select('*')
+      .order('table_number', { ascending: true });
+    if (data) setRestaurantTables(data as RestaurantTable[]);
+  };
+
+  const handleAddTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const num = parseInt(newTableNumber, 10);
+    if (Number.isNaN(num) || num < 1) {
+      alert(t('Enter a valid table number (1 or higher).', 'ትክክለኛ የጠረጴዛ ቁጥር ያስገቡ (1 እና ላይ)።'));
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('restaurant_tables')
+        .insert({ table_number: num, status: 'active' });
+      if (error) throw error;
+      setNewTableNumber('');
+      fetchRestaurantTables();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(t('Could not add table: ', 'ጠረጴዛ ማክል አልተሳካም፡ ') + message);
+    }
+  };
+
+  const handleToggleTableStatus = async (table: RestaurantTable) => {
+    const next = table.status === 'active' ? 'inactive' : 'active';
+    try {
+      const { error } = await supabase
+        .from('restaurant_tables')
+        .update({ status: next })
+        .eq('id', table.id);
+      if (error) throw error;
+      fetchRestaurantTables();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(message);
+    }
+  };
+
+  const handleDeleteTable = async (id: string, tableNumber: number) => {
+    if (
+      !confirm(
+        t(
+          `Delete table ${tableNumber}? Existing orders keep history but new scans will fail until you re-add this number.`,
+          `ጠረጴዛ ${tableNumber} ይሰረዝ? የቀድሞ ትዕዛዞች ይቆያሉ፤ ቁጥሩ እንደገና ካልተጨመረ አዲስ ስካን አይሰራም።`
+        )
+      )
+    ) {
+      return;
+    }
+    try {
+      const { error } = await supabase.from('restaurant_tables').delete().eq('id', id);
+      if (error) throw error;
+      fetchRestaurantTables();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(message);
+    }
   };
 
   const fetchCategories = async () => {
@@ -251,6 +328,7 @@ export default function AdminDashboard() {
     await supabase.auth.signOut();
     setUser(null);
     setIsAdmin(false);
+    setRestaurantTables([]);
     setCategories([]);
     setMenuItems([]);
     setEmployees([]);
@@ -602,6 +680,18 @@ export default function AdminDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab('tables')}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
+                activeTab === 'tables'
+                  ? 'bg-amber-500 text-slate-950'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>{t('Tables & QR', 'ጠረጴዛዎች እና QR')}</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('categories')}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
                 activeTab === 'categories'
@@ -749,6 +839,98 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TABLES TAB */}
+        {activeTab === 'tables' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-xl font-black">{t('Restaurant Tables', 'የምግብ ቤት ጠረጴዛዎች')}</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {t(
+                  'Each table gets a menu link and QR code on the home page. Customers scan to order.',
+                  'እያንዳንዱ ጠረጴዛ በመነሻ ገጽ ላይ ሜኑ ሊንክ እና QR ኮድ ያገኛል። ደንበኞች በስካን ያዘጋጁ።'
+                )}
+              </p>
+            </div>
+
+            <form
+              onSubmit={handleAddTable}
+              className="flex flex-col sm:flex-row gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl"
+            >
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  {t('Table number', 'የጠረጴዛ ቁጥር')}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={newTableNumber}
+                  onChange={(e) => setNewTableNumber(e.target.value)}
+                  placeholder="e.g. 6"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="sm:self-end bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t('Add Table', 'ጠረጴዛ ጨምር')}</span>
+              </button>
+            </form>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {restaurantTables.map((tbl) => (
+                <div
+                  key={tbl.id}
+                  className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col gap-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-black text-amber-500">#{tbl.table_number}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        tbl.status === 'active'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : 'bg-slate-800 text-slate-500 border-slate-700'
+                      }`}
+                    >
+                      {tbl.status === 'active'
+                        ? t('Active', 'ንቁ')
+                        : t('Inactive', 'አይሰራም')}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-mono text-slate-500 truncate">
+                    /table/{tbl.table_number}
+                  </p>
+                  <div className="flex gap-2 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTableStatus(tbl)}
+                      className="flex-1 text-xs font-bold py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+                    >
+                      {tbl.status === 'active'
+                        ? t('Deactivate', 'አቦዝን')
+                        : t('Activate', 'አንቅ')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTable(tbl.id, tbl.table_number)}
+                      className="p-2 bg-slate-800 hover:bg-red-500/10 text-red-500 rounded-lg border border-slate-700 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {restaurantTables.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-8">
+                {t('No tables yet. Add your first table above.', 'ጠረጴዛ የለም። ከላይ የመጀመሪያውን ይጨምሩ።')}
+              </p>
+            )}
           </div>
         )}
 
