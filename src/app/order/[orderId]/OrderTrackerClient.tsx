@@ -3,12 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { createClient } from '@/utils/supabase/client';
-import { 
-  Clock, 
-  ChefHat, 
-  CheckCircle, 
-  Utensils, 
-  ShoppingBag, 
+import {
+  Clock,
+  ChefHat,
+  CheckCircle,
+  Utensils,
+  ShoppingBag,
   ArrowLeft,
   Loader2
 } from 'lucide-react';
@@ -28,7 +28,7 @@ type TrackedOrder = {
 };
 
 /** Supabase may return a joined row as object or single-element array. */
-function normalizeTrackedOrder(row: Record<string, unknown>): TrackedOrder {
+export function normalizeTrackedOrder(row: Record<string, unknown>): TrackedOrder {
   const raw = row.restaurant_tables;
   let restaurant_tables: TrackedOrder['restaurant_tables'] = null;
 
@@ -88,7 +88,6 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
       }
     };
 
-    // Realtime (when enabled in Supabase)
     const channel = supabase
       .channel(`order-track:${order.id}`)
       .on(
@@ -107,7 +106,6 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
       )
       .subscribe();
 
-    // Polling fallback (mobile often blocks or misses realtime)
     const pollInterval = setInterval(refreshOrder, 4000);
     refreshOrder();
 
@@ -118,30 +116,30 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
   }, [order.id, supabase]);
 
   const steps = [
-    { 
-      key: 'placed', 
-      label: t('Order Placed', 'ትዕዛዝ ተቀምጧል'), 
+    {
+      key: 'placed',
+      label: t('Order Placed', 'ትዕዛዝ ተቀምጧል'),
       desc: t('We have received your order.', 'ትዕዛዝዎን በትክክል ተቀብለናል።'),
       icon: Clock,
       color: 'text-blue-400 bg-blue-500/10 border-blue-500/20'
     },
-    { 
-      key: 'preparing', 
-      label: t('Preparing', 'በመዘጋጀት ላይ'), 
+    {
+      key: 'preparing',
+      label: t('Preparing', 'በመዘጋጀት ላይ'),
       desc: t('The kitchen is preparing your food.', 'ማእድ ቤቱ ምግብዎን በማዘጋጀት ላይ ነው።'),
       icon: ChefHat,
       color: 'text-amber-400 bg-amber-500/10 border-amber-500/20'
     },
-    { 
-      key: 'ready', 
-      label: t('Ready to Serve', 'ተዘጋጅቷል'), 
+    {
+      key: 'ready',
+      label: t('Ready to Serve', 'ተዘጋጅቷል'),
       desc: t('Your order is ready! A waiter will bring it to you shortly.', 'ምግብዎ ደርሷል! አስተናጋጅ አሁን ያመጣልዎታል።'),
       icon: CheckCircle,
       color: 'text-green-400 bg-green-500/10 border-green-500/20'
     },
-    { 
-      key: 'served', 
-      label: t('Served', 'ቀረበ'), 
+    {
+      key: 'served',
+      label: t('Served', 'ቀረበ'),
       desc: t('Enjoy your meal!', 'መልካም ምግብ!'),
       icon: Utensils,
       color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-bold'
@@ -157,9 +155,8 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-slate-950 px-3 py-4 safe-bottom safe-top w-full max-w-lg mx-auto">
-      {/* Back to menu option */}
       {order.restaurant_tables && (
-        <Link 
+        <Link
           href={`/table/${order.restaurant_tables.table_number}`}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 mb-6 w-fit transition"
         >
@@ -168,9 +165,7 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
         </Link>
       )}
 
-      {/* Main Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mb-6 relative overflow-hidden">
-        {/* Glow behind */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full -mr-10 -mt-10" />
 
         <div className="flex justify-between items-start mb-4 relative z-10">
@@ -197,24 +192,20 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
             </p>
           </div>
         ) : (
-          /* Timeline Steps */
           <div className="my-6 relative pl-7 sm:pl-8 space-y-6 sm:space-y-8 before:content-[''] before:absolute before:left-3 before:sm:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isCompleted = index < currentStepIndex;
               const isActive = index === currentStepIndex;
-              const isUpcoming = index > currentStepIndex;
 
               return (
                 <div key={step.key} className="relative transition duration-300">
-                  {/* Circle Indicator */}
-                  <span className={`absolute -left-7 sm:-left-8 top-0.5 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${
-                    isActive 
+                  <span className={`absolute -left-7 sm:-left-8 top-0.5 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${isActive
                       ? 'bg-amber-500 border-amber-400 text-slate-950 scale-110 shadow-lg shadow-amber-500/20 animate-pulse'
-                      : isCompleted 
+                      : isCompleted
                         ? 'bg-emerald-600 border-emerald-500 text-white'
                         : 'bg-slate-900 border-slate-800 text-slate-500'
-                  }`}>
+                    }`}>
                     {isCompleted ? (
                       <span className="text-xs font-black">✓</span>
                     ) : (
@@ -222,19 +213,16 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
                     )}
                   </span>
 
-                  {/* Connecting line glow */}
                   {isCompleted && (
                     <span className="absolute -left-5 top-5 w-0.5 h-10.5 bg-emerald-500 -z-10" />
                   )}
 
-                  {/* Content */}
-                  <div className={`transition ${
-                    isActive 
-                      ? 'opacity-100 scale-[1.01]' 
-                      : isCompleted 
-                        ? 'opacity-80' 
+                  <div className={`transition ${isActive
+                      ? 'opacity-100 scale-[1.01]'
+                      : isCompleted
+                        ? 'opacity-80'
                         : 'opacity-40'
-                  }`}>
+                    }`}>
                     <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
                       {step.label}
                       {isActive && (
@@ -249,7 +237,6 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
           </div>
         )}
 
-        {/* Status Pulsing Banner */}
         {order.status !== 'cancelled' && order.status !== 'served' && (
           <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
             <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
@@ -260,7 +247,6 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
         )}
       </div>
 
-      {/* Order Items Breakdown */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
         <h2 className="font-extrabold text-sm text-slate-100 border-b border-slate-800 pb-3 mb-3 flex items-center gap-2">
           <ShoppingBag className="w-4 h-4 text-amber-500" />

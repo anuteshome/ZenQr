@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
-import OrderTrackerClient from './OrderTrackerClient';
+import OrderTrackerClient, { normalizeTrackedOrder } from './OrderTrackerClient';
 
 interface PageProps {
   params: Promise<{ orderId: string }>;
@@ -29,7 +29,7 @@ export default async function OrderPage({ params }: PageProps) {
 
   return (
     <OrderTrackerClient
-      order={order}
+      order={normalizeTrackedOrder(order as Record<string, unknown>)}
       orderItems={items || []}
     />
   );
