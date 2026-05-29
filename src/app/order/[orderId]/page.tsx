@@ -6,31 +6,56 @@ interface PageProps {
   params: Promise<{ orderId: string }>;
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function OrderPage({ params }: PageProps) {
   const { orderId } = await params;
-  const supabase = await createClient();
 
-  // 1. Fetch Order Details with Table Info
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .select('*, restaurant_tables(table_number)')
-    .eq('id', orderId)
-    .single();
-
-  if (orderError || !order) {
+  if (!orderId) {
     notFound();
   }
 
-  // 2. Fetch Order Items
-  const { data: items } = await supabase
+  const supabase = await createClient();
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      restaurant_tables (
+        table_number
+      )
+    `)
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (orderError) {
+    console.error('Order fetch error:', orderError);
+    notFound();
+  }
+
+  if (!order) {
+    notFound();
+  }
+
+  const { data: items, error: itemsError } = await supabase
     .from('order_items')
-    .select('*, menu_items(name_en, name_am)')
+    .select(`
+      *,
+      menu_items (
+        name_en,
+        name_am
+      )
+    `)
     .eq('order_id', orderId);
+
+  if (itemsError) {
+    console.error('Order items fetch error:', itemsError);
+  }
 
   return (
     <OrderTrackerClient
       order={normalizeTrackedOrder(order as Record<string, unknown>)}
-      orderItems={items || []}
+      orderItems={items ?? []}
     />
   );
 }
