@@ -15,18 +15,42 @@ import {
 import Link from 'next/link';
 import { saveLastOrder } from '@/utils/lastOrder';
 
-interface OrderTrackerClientProps {
-  order: {
-    id: string;
-    table_id: string | null;
-    status: 'placed' | 'preparing' | 'ready' | 'served' | 'cancelled';
-    total_price: number;
-    notes: string | null;
-    created_at: string;
-    restaurant_tables: {
-      table_number: number;
-    } | null;
+type TrackedOrder = {
+  id: string;
+  table_id: string | null;
+  status: 'placed' | 'preparing' | 'ready' | 'served' | 'cancelled';
+  total_price: number;
+  notes: string | null;
+  created_at: string;
+  restaurant_tables: {
+    table_number: number;
+  } | null;
+};
+
+/** Supabase may return a joined row as object or single-element array. */
+function normalizeTrackedOrder(row: Record<string, unknown>): TrackedOrder {
+  const raw = row.restaurant_tables;
+  let restaurant_tables: TrackedOrder['restaurant_tables'] = null;
+
+  if (Array.isArray(raw) && raw[0] && typeof raw[0] === 'object' && 'table_number' in raw[0]) {
+    restaurant_tables = { table_number: Number((raw[0] as { table_number: number }).table_number) };
+  } else if (raw && typeof raw === 'object' && 'table_number' in raw) {
+    restaurant_tables = { table_number: Number((raw as { table_number: number }).table_number) };
+  }
+
+  return {
+    id: String(row.id),
+    table_id: (row.table_id as string | null) ?? null,
+    status: row.status as TrackedOrder['status'],
+    total_price: Number(row.total_price),
+    notes: (row.notes as string | null) ?? null,
+    created_at: String(row.created_at),
+    restaurant_tables,
   };
+}
+
+interface OrderTrackerClientProps {
+  order: TrackedOrder;
   orderItems: Array<{
     id: string;
     menu_item_id: string | null;
@@ -60,7 +84,7 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
         .single();
 
       if (!error && data) {
-        setOrder(data as typeof initialOrder);
+        setOrder(normalizeTrackedOrder(data as Record<string, unknown>));
       }
     };
 
