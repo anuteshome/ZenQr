@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
@@ -302,7 +303,7 @@ export default function AdminDashboard() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
+
       setUser(data.user);
       const { data: emp, error: empErr } = await supabase
         .from('employees')
@@ -669,11 +670,10 @@ export default function AdminDashboard() {
           <nav className="p-4 space-y-1">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'overview'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'overview'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>{t('Dashboard', 'ዳሽቦርድ')}</span>
@@ -681,11 +681,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('tables')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'tables'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'tables'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <LayoutGrid className="w-4 h-4" />
               <span>{t('Tables & QR', 'ጠረጴዛዎች እና QR')}</span>
@@ -693,11 +692,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('categories')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'categories'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'categories'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <BookOpen className="w-4 h-4" />
               <span>{t('Menu Categories', 'የምግብ ምድቦች')}</span>
@@ -705,11 +703,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('menu')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'menu'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'menu'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <Utensils className="w-4 h-4" />
               <span>{t('Menu Items', 'የምግብ ዝርዝሮች')}</span>
@@ -717,11 +714,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('employees')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'employees'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'employees'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <Users className="w-4 h-4" />
               <span>{t('Employees', 'ሰራተኞች')}</span>
@@ -729,11 +725,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
-                activeTab === 'inventory'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition ${activeTab === 'inventory'
                   ? 'bg-amber-500 text-slate-950'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+                }`}
             >
               <Package className="w-4 h-4" />
               <span>{t('Inventory', 'ኢንቬንተሪ')}</span>
@@ -755,13 +750,13 @@ export default function AdminDashboard() {
 
       {/* Main Content Area */}
       <main className="flex-1 bg-slate-950 p-6 md:p-8 overflow-y-auto max-h-screen">
-        
+
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
               <h2 className="text-xl font-black">{t('Overview Dashboard', 'አጠቃላይ ዳሽቦርድ')}</h2>
-              <button 
+              <button
                 onClick={fetchAllData}
                 className="text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-800 transition"
               >
@@ -792,9 +787,8 @@ export default function AdminDashboard() {
               </div>
 
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center gap-4 shadow-md">
-                <div className={`p-3 rounded-xl border ${
-                  lowStockItems.length > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse' : 'bg-green-500/10 text-green-500 border-green-500/20'
-                }`}>
+                <div className={`p-3 rounded-xl border ${lowStockItems.length > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse' : 'bg-green-500/10 text-green-500 border-green-500/20'
+                  }`}>
                   <AlertTriangle className="w-6 h-6" />
                 </div>
                 <div>
@@ -807,7 +801,7 @@ export default function AdminDashboard() {
             {/* Recent Orders List */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
               <h3 className="font-extrabold text-sm text-slate-200 border-b border-slate-850 pb-3 mb-4">{t('Recent Order Activity', 'የቅርብ ጊዜ እንቅስቃሴዎች')}</h3>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead>
@@ -823,11 +817,10 @@ export default function AdminDashboard() {
                       <tr key={o.id} className="text-slate-300">
                         <td className="py-3 font-mono">{o.id.slice(0, 8).toUpperCase()}</td>
                         <td className="py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            o.status === 'served' ? 'bg-green-500/20 text-green-400' :
-                            o.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
-                            'bg-amber-500/20 text-amber-400 animate-pulse'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.status === 'served' ? 'bg-green-500/20 text-green-400' :
+                              o.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                'bg-amber-500/20 text-amber-400 animate-pulse'
+                            }`}>
                             {o.status.toUpperCase()}
                           </span>
                         </td>
@@ -890,11 +883,10 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-black text-amber-500">#{tbl.table_number}</span>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        tbl.status === 'active'
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tbl.status === 'active'
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                           : 'bg-slate-800 text-slate-500 border-slate-700'
-                      }`}
+                        }`}
                     >
                       {tbl.status === 'active'
                         ? t('Active', 'ንቁ')
@@ -1012,7 +1004,7 @@ export default function AdminDashboard() {
                         <span className="font-extrabold text-xs text-amber-500 shrink-0">{item.price} ETB</span>
                       </div>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">{t(item.description_en || '', item.description_am || '')}</p>
-                      
+
                       <div className="flex items-center justify-between mt-3">
                         <span className="bg-slate-800 border border-slate-750 text-[10px] text-slate-300 px-2.5 py-0.5 rounded-full font-bold">
                           {cat ? t(cat.name_en, cat.name_am) : 'Unknown Category'}
@@ -1079,20 +1071,18 @@ export default function AdminDashboard() {
                       <tr key={emp.id} className="text-slate-300">
                         <td className="p-4 font-semibold">{emp.first_name} {emp.last_name}</td>
                         <td className="p-4">
-                          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            emp.role === 'admin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' :
-                            emp.role === 'kitchen' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' :
-                            'bg-blue-500/20 text-blue-400 border border-blue-500/20'
-                          }`}>
+                          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${emp.role === 'admin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' :
+                              emp.role === 'kitchen' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' :
+                                'bg-blue-500/20 text-blue-400 border border-blue-500/20'
+                            }`}>
                             {emp.role.toUpperCase()}
                           </span>
                         </td>
                         <td className="p-4 text-slate-400">{emp.email}</td>
                         <td className="p-4 text-slate-400">{emp.phone || '-'}</td>
                         <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            emp.is_active ? 'bg-green-500/20 text-green-400' : 'bg-slate-800 text-slate-500'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${emp.is_active ? 'bg-green-500/20 text-green-400' : 'bg-slate-800 text-slate-500'
+                            }`}>
                             {emp.is_active ? 'ACTIVE' : 'INACTIVE'}
                           </span>
                         </td>
