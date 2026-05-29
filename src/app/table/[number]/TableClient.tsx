@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useCart } from '@/context/CartContext';
 import { createClient } from '@/utils/supabase/client';
+import { getLastOrderForTable, saveLastOrder } from '@/utils/lastOrder';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingCart, 
@@ -14,9 +15,7 @@ import {
   Languages, 
   ChevronRight, 
   Loader2, 
-  Clock, 
-  Check,
-  AlertTriangle
+  MapPin,
 } from 'lucide-react';
 
 interface TableClientProps {
@@ -137,7 +136,12 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
         .from('order_items')
         .insert(orderItemsPayload);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw itemsError;
+      }
+
+      saveLastOrder(order.id, table.table_number);
 
       // 4. Success! Clear cart & redirect
       clearCart();
@@ -151,63 +155,96 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-screen bg-slate-950 pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-amber-500 flex items-center gap-2">
-            <span>BistroQR</span>
-            <span className="text-xs bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
-              {t(`Table ${table.table_number}`, `ጠረጴዛ ${table.table_number}`)}
-            </span>
-          </h1>
-          <p className="text-[10px] text-slate-400">
-            {t('Browse and order directly', 'በቀጥታ መርጠው ያዝዙ')}
-          </p>
-        </div>
+  const handleTrackOrder = () => {
+    const last = getLastOrderForTable(table.table_number);
+    if (last) {
+      router.push(`/order/${last.orderId}`);
+      return;
+    }
+    alert(
+      t(
+        'No order found yet. Place an order first, then use Track to follow kitchen progress.',
+        'እስካማ ትዕዛዝ አልተገኘም። መጀመሪያ ትዕዛዝ ያስቀምጡ፣ ከዚያ Track በመጫን የማእድ ቤት ሂደት ይከታተሉ።'
+      )
+    );
+  };
 
-        {/* Language Switcher */}
-        <button
-          onClick={() => setLanguage(language === 'en' ? 'am' : 'en')}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition duration-150 text-xs font-semibold"
-        >
-          <Languages className="w-4 h-4 text-amber-500" />
-          <span>{language === 'en' ? 'አማርኛ' : 'English'}</span>
-        </button>
+  const headerBtnClass =
+    'flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 min-h-10 min-w-10 px-2.5 py-2 rounded-lg border border-slate-700 transition text-xs font-semibold touch-manipulation';
+
+  return (
+    <div className="flex flex-col min-h-[100dvh] bg-slate-950 pb-28 safe-bottom w-full max-w-lg mx-auto sm:max-w-none">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 safe-top">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-extrabold tracking-tight text-amber-500 flex items-center gap-1.5 flex-wrap">
+              <span className="truncate">BistroQR</span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30 shrink-0">
+                {t(`Table ${table.table_number}`, `ጠረጴዛ ${table.table_number}`)}
+              </span>
+            </h1>
+            <p className="text-[10px] text-slate-400 truncate">
+              {t('Browse and order directly', 'በቀጥታ መርጠው ያዝዙ')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleTrackOrder}
+              className={`${headerBtnClass} text-amber-400`}
+              aria-label={t('Track my order', 'ትዕዛዜን ክትትል')}
+            >
+              <MapPin className="w-4 h-4 shrink-0" />
+              <span>{t('Track', 'ክትትል')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage(language === 'en' ? 'am' : 'en')}
+              className={headerBtnClass}
+              aria-label={t('Change language', 'ቋንቋ ቀይር')}
+            >
+              <Languages className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="max-[380px]:hidden">{language === 'en' ? 'አማ' : 'EN'}</span>
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Hero / Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600/20 to-orange-600/20 px-4 py-8 text-center border-b border-slate-800">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-50" />
-        <h2 className="text-2xl font-black text-slate-100 mb-1 z-10 relative">
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600/20 to-orange-600/20 px-3 py-4 sm:py-6 text-center border-b border-slate-800">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-50" />
+        <h2 className="text-lg sm:text-xl font-black text-slate-100 mb-1 z-10 relative leading-tight">
           {t('Welcome to Our Restaurant', 'እንኳን ወደ ምግብ ቤታችን በደህና መጡ')}
         </h2>
-        <p className="text-sm text-amber-200/80 z-10 relative max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-amber-200/80 z-10 relative max-w-md mx-auto leading-snug">
           {t('Select your favorite dishes and place your order directly. We will handle the rest!', 'የሚወዱትን ምግብ ይምረጡና ትዕዛዝዎን ያስተላልፉ። ቀሪውን ለእኛ ይተውት!')}
         </p>
       </div>
 
       {/* Search Bar */}
-      <div className="px-4 py-3">
+      <div className="px-3 py-2">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
-            type="text"
+            type="search"
+            inputMode="search"
             placeholder={t('Search dishes...', 'ምግቦችን ይፈልጉ...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition"
+            className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition"
           />
         </div>
       </div>
 
       {/* Categories Horizontal Scroll */}
-      <div className="px-4 py-2 border-b border-slate-900/50">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+      <div className="px-3 py-2 border-b border-slate-900/50">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
           <button
+            type="button"
             onClick={() => setSelectedCategory(null)}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+            className={`snap-start flex-shrink-0 px-3 py-2 min-h-10 rounded-full text-xs font-semibold border transition touch-manipulation ${
               selectedCategory === null
                 ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/10'
                 : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
@@ -217,9 +254,10 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
           </button>
           {categories.map((cat) => (
             <button
+              type="button"
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+              className={`snap-start flex-shrink-0 px-3 py-2 min-h-10 rounded-full text-xs font-semibold border transition touch-manipulation ${
                 selectedCategory === cat.id
                   ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/10'
                   : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
@@ -232,20 +270,29 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
       </div>
 
       {/* Menu List */}
-      <main className="px-4 py-4 flex-1">
+      <main className="px-3 py-3 flex-1 w-full">
         {filteredItems.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-slate-500 text-sm">{t('No dishes found.', 'ምንም ምግብ አልተገኘም።')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-row h-28 hover:border-slate-700 transition"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenAddModal(item)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenAddModal(item);
+                  }
+                }}
+                className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-row min-h-[5.5rem] sm:h-28 hover:border-slate-700 transition cursor-pointer touch-manipulation active:scale-[0.99] w-full"
               >
                 {/* Image or Placeholder */}
-                <div className="w-28 bg-slate-800 relative flex-shrink-0 flex items-center justify-center border-r border-slate-800">
+                <div className="w-20 sm:w-24 bg-slate-800 relative flex-shrink-0 flex items-center justify-center border-r border-slate-800">
                   {item.image_url ? (
                     <img
                       src={item.image_url}
@@ -253,16 +300,16 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="text-amber-500 font-bold text-2xl opacity-40">
+                    <div className="text-amber-500 font-bold text-xl opacity-40">
                       {item.name_en.charAt(0)}
                     </div>
                   )}
                 </div>
 
                 {/* Details */}
-                <div className="p-3 flex-1 flex flex-col justify-between overflow-hidden">
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-100 truncate">
+                <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-between overflow-hidden min-w-0">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm text-slate-100 line-clamp-1">
                       {t(item.name_en, item.name_am)}
                     </h3>
                     <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">
@@ -274,10 +321,15 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
                       {item.price} ETB
                     </span>
                     <button
-                      onClick={() => handleOpenAddModal(item)}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold p-1 rounded-lg transition"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenAddModal(item);
+                      }}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold p-2.5 min-w-11 min-h-11 rounded-lg transition touch-manipulation flex items-center justify-center"
+                      aria-label={t('Add to order', 'ወደ ትዕዛዝ ጨምር')}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -289,10 +341,11 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
 
       {/* Floating View Cart Bar */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent z-30">
+        <div className="fixed bottom-0 left-0 right-0 p-3 safe-bottom bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent z-30">
           <button
+            type="button"
             onClick={() => setIsCartOpen(true)}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-between shadow-xl shadow-amber-500/10 transition transform active:scale-[0.98] max-w-md mx-auto"
+            className="w-full max-w-lg mx-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl flex items-center justify-between shadow-xl shadow-amber-500/10 transition transform active:scale-[0.98] touch-manipulation"
           >
             <div className="flex items-center gap-2">
               <span className="relative">
@@ -313,12 +366,16 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
 
       {/* Add Item Modal */}
       {selectedItemForModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none p-0 md:p-4">
           {/* Overlay closer */}
-          <div className="absolute inset-0" onClick={() => setSelectedItemForModal(null)} />
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+            onClick={() => setSelectedItemForModal(null)}
+            aria-hidden
+          />
 
           {/* Modal box */}
-          <div className="bg-slate-900 border-t border-slate-800 md:border border-slate-850 rounded-t-3xl md:rounded-2xl w-full max-w-md p-6 relative z-10 animate-slide-up shadow-2xl">
+          <div className="bg-slate-900 border-t border-slate-800 md:border border-slate-850 rounded-t-3xl md:rounded-2xl w-full max-w-lg mx-auto p-4 sm:p-6 pb-8 safe-bottom relative z-10 shadow-2xl pointer-events-auto max-h-[90dvh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-100 pr-8">
               {t(selectedItemForModal.name_en, selectedItemForModal.name_am)}
             </h3>
@@ -361,14 +418,15 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
             </div>
 
             {/* Total / Add button */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex-1">
                 <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('Total Price', 'ጠቅላላ ዋጋ')}</p>
-                <p className="text-xl font-black text-amber-400">{(selectedItemForModal.price * itemQuantity).toFixed(2)} ETB</p>
+                <p className="text-lg sm:text-xl font-black text-amber-400">{(selectedItemForModal.price * itemQuantity).toFixed(2)} ETB</p>
               </div>
               <button
+                type="button"
                 onClick={handleAddToCart}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition flex items-center gap-2"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 min-h-11 rounded-xl transition flex items-center justify-center gap-2 touch-manipulation"
               >
                 <span>{t('Add to Cart', 'ትዕዛዝ ውስጥ ጨምር')}</span>
               </button>
@@ -379,12 +437,16 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
 
       {/* Cart Drawer */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
           {/* Overlay closer */}
-          <div className="absolute inset-0" onClick={() => setIsCartOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto"
+            onClick={() => setIsCartOpen(false)}
+            aria-hidden
+          />
 
           {/* Drawer content */}
-          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl w-full max-w-md h-[90vh] flex flex-col relative z-10 animate-slide-up shadow-2xl">
+          <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl w-full max-w-lg mx-auto h-[min(90dvh,100%)] flex flex-col relative z-10 shadow-2xl pointer-events-auto">
             {/* Header */}
             <div className="p-4 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2">
@@ -468,16 +530,17 @@ export default function TableClient({ table, categories, initialMenuItems }: Tab
             </div>
 
             {/* Footer Summary & Checkout */}
-            <div className="p-4 bg-slate-950 border-t border-slate-800 flex-shrink-0">
+            <div className="p-4 pb-6 safe-bottom bg-slate-950 border-t border-slate-800 flex-shrink-0">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-sm text-slate-400">{t('Total (VAT inclusive)', 'ጠቅላላ (ተ.እ.ታ ጨምሮ)')}</span>
                 <span className="text-xl font-black text-amber-500">{cartTotal.toFixed(2)} ETB</span>
               </div>
 
               <button
+                type="button"
                 onClick={handlePlaceOrder}
                 disabled={isSubmittingOrder}
-                className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 disabled:text-slate-500 font-black py-3.5 rounded-xl transition flex items-center justify-center gap-2"
+                className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 text-slate-950 disabled:text-slate-500 font-black py-3.5 min-h-12 rounded-xl transition flex items-center justify-center gap-2 touch-manipulation"
               >
                 {isSubmittingOrder ? (
                   <>

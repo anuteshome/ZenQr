@@ -13,6 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
+import { saveLastOrder } from '@/utils/lastOrder';
 
 interface OrderTrackerClientProps {
   order: {
@@ -45,28 +46,49 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
   const supabase = createClient();
 
   useEffect(() => {
-    // 1. Subscribe to order updates in real-time
+    if (initialOrder.restaurant_tables?.table_number) {
+      saveLastOrder(initialOrder.id, initialOrder.restaurant_tables.table_number);
+    }
+  }, [initialOrder.id, initialOrder.restaurant_tables?.table_number]);
+
+  useEffect(() => {
+    const refreshOrder = async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, table_id, status, total_price, notes, created_at, restaurant_tables(table_number)')
+        .eq('id', order.id)
+        .single();
+
+      if (!error && data) {
+        setOrder(data as typeof initialOrder);
+      }
+    };
+
+    // Realtime (when enabled in Supabase)
     const channel = supabase
       .channel(`order-track:${order.id}`)
       .on(
         'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'orders', 
-          filter: `id=eq.${order.id}` 
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${order.id}`,
         },
-        (payload: any) => {
-          console.log('Order status updated real-time:', payload.new);
-          setOrder((prev) => ({
-            ...prev,
-            status: payload.new.status,
-          }));
+        (payload: { new: { status: typeof order.status } }) => {
+          if (payload.new?.status) {
+            setOrder((prev) => ({ ...prev, status: payload.new.status }));
+          }
         }
       )
       .subscribe();
 
+    // Polling fallback (mobile often blocks or misses realtime)
+    const pollInterval = setInterval(refreshOrder, 4000);
+    refreshOrder();
+
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [order.id, supabase]);
@@ -110,7 +132,7 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
   const currentStepIndex = getStepIndex(order.status);
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 px-4 py-6 max-w-md mx-auto">
+    <div className="flex flex-col min-h-[100dvh] bg-slate-950 px-3 py-4 safe-bottom safe-top w-full max-w-lg mx-auto">
       {/* Back to menu option */}
       {order.restaurant_tables && (
         <Link 
@@ -152,7 +174,7 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
           </div>
         ) : (
           /* Timeline Steps */
-          <div className="my-8 relative pl-8 space-y-8 before:content-[''] before:absolute before:left-3.5 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-slate-800">
+          <div className="my-6 relative pl-7 sm:pl-8 space-y-6 sm:space-y-8 before:content-[''] before:absolute before:left-3 before:sm:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
             {steps.map((step, index) => {
               const StepIcon = step.icon;
               const isCompleted = index < currentStepIndex;
@@ -162,7 +184,7 @@ export default function OrderTrackerClient({ order: initialOrder, orderItems }: 
               return (
                 <div key={step.key} className="relative transition duration-300">
                   {/* Circle Indicator */}
-                  <span className={`absolute -left-8.5 top-0.5 w-7.5 h-7.5 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${
+                  <span className={`absolute -left-7 sm:-left-8 top-0.5 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${
                     isActive 
                       ? 'bg-amber-500 border-amber-400 text-slate-950 scale-110 shadow-lg shadow-amber-500/20 animate-pulse'
                       : isCompleted 

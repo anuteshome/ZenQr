@@ -33,6 +33,11 @@ We have created a full schema file for you at [schema.sql](file:///c:/Users/hp/D
 4. Click **Run** (or press `Cmd + Enter` / `Ctrl + Enter`).
 5. Ensure the query runs successfully with no errors.
 
+### Kitchen / order tracking not syncing?
+If phone orders do not appear on `/kitchen`, or the customer status page stays on **placed** after the kitchen updates an order, run [supabase_fix_kitchen_tracking.sql](file:///c:/Users/hp/Documents/Projects/supabase_fix_kitchen_tracking.sql) in the SQL Editor. The kitchen board does not use employee login, so extra RLS policies are required.
+
+Also confirm **Authentication → Providers → Anonymous Sign-ins** is enabled so customers can place orders from phones.
+
 ---
 
 ## Step 3: Configure Authentication

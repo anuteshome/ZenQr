@@ -29,8 +29,15 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy (Vercel or similar)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push this repo to GitHub and import it on [Vercel](https://vercel.com/new).
+2. Add **Environment variables** (see `.env.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SITE_URL` = your live URL, e.g. `https://bistroqr.vercel.app` (no trailing slash)
+3. Deploy. Open the live site → home page → **QR Code** for each table. QR links use `https://your-domain.com/table/1` automatically (no IP address).
+4. In **Supabase → Authentication → URL configuration**, add your production URL to **Site URL** and **Redirect URLs**.
+5. Run `supabase_fix_kitchen_tracking.sql` in the SQL Editor if kitchen/tracking does not sync.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Local Wi‑Fi testing still works with `npm run dev`; production QR codes use your public HTTPS link.

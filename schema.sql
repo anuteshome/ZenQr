@@ -140,6 +140,18 @@ CREATE POLICY "Allow kitchen, waiter and admin to update orders" ON orders FOR U
     USING (get_user_role() IN ('admin', 'kitchen', 'waiter'))
     WITH CHECK (get_user_role() IN ('admin', 'kitchen', 'waiter'));
 
+-- Kitchen display board (no login — trusted restaurant device on local network)
+CREATE POLICY "Kitchen board read active orders" ON orders FOR SELECT
+    USING (status IN ('placed', 'preparing', 'ready'));
+
+CREATE POLICY "Kitchen board update order status" ON orders FOR UPDATE
+    USING (status IN ('placed', 'preparing', 'ready'))
+    WITH CHECK (status IN ('placed', 'preparing', 'ready', 'served', 'cancelled'));
+
+-- Order status page (works if anonymous session is lost on mobile)
+CREATE POLICY "Public read order for status tracking" ON orders FOR SELECT
+    USING (true);
+
 -- order_items policies
 CREATE POLICY "Allow customers/staff to view order items" ON order_items FOR SELECT 
     USING (
@@ -157,6 +169,20 @@ CREATE POLICY "Allow customers to insert order items" ON order_items FOR INSERT
             WHERE orders.id = order_items.order_id 
             AND (orders.user_id = auth.uid() OR orders.user_id IS NULL)
         )
+    );
+
+CREATE POLICY "Kitchen board read order items" ON order_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM orders
+            WHERE orders.id = order_items.order_id
+            AND orders.status IN ('placed', 'preparing', 'ready')
+        )
+    );
+
+CREATE POLICY "Public read order items for tracking" ON order_items FOR SELECT
+    USING (
+        EXISTS (SELECT 1 FROM orders WHERE orders.id = order_items.order_id)
     );
 
 -- employees policies

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useLanguage } from '@/context/LanguageContext';
+import { playNewOrderSound } from '@/utils/notificationSound';
 import {
   LayoutDashboard,
   Utensils,
@@ -167,12 +168,7 @@ export default function AdminDashboard() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
-          try {
-            const audio = new Audio('/notification.mp3');
-            audio.play();
-          } catch (e) {
-            console.log('Audio playback blocked');
-          }
+          playNewOrderSound();
           fetchOverviewStats();
         }
       )

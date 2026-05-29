@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useLanguage } from '@/context/LanguageContext';
+import { playNewOrderSound } from '@/utils/notificationSound';
 import { 
   ChefHat, 
   Clock, 
@@ -12,7 +13,6 @@ import {
   CheckSquare, 
   Languages, 
   AlertCircle,
-  Bell
 } from 'lucide-react';
 
 interface OrderItem {
@@ -69,7 +69,8 @@ export default function KitchenDisplay() {
         .order('created_at', { ascending: true });
 
       if (dbError) throw dbError;
-      setOrders(data as Order[] || []);
+      setOrders((data as Order[]) || []);
+      setError(null);
     } catch (err: any) {
       console.error('Error fetching kitchen orders:', err);
       setError(err.message);
@@ -81,42 +82,33 @@ export default function KitchenDisplay() {
   useEffect(() => {
     fetchActiveOrders();
 
-    // 2. Subscribe to realtime updates on orders
+    const pollInterval = setInterval(fetchActiveOrders, 5000);
+
     const orderChannel = supabase
       .channel('kitchen-orders')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
-          console.log('Realtime change in orders:', payload);
-          // Play notification sound on new order
           if (payload.eventType === 'INSERT') {
-            try {
-              const audio = new Audio('/notification.mp3');
-              audio.play();
-            } catch (e) {
-              console.log('Audio playback blocked or failed');
-            }
+            playNewOrderSound();
           }
-          // Refetch to get complete joined data (table number, order items, etc.)
           fetchActiveOrders();
         }
       )
       .subscribe();
 
-    // 3. Subscribe to realtime updates on order_items just in case
     const itemsChannel = supabase
       .channel('kitchen-order-items')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'order_items' },
-        () => {
-          fetchActiveOrders();
-        }
+        () => fetchActiveOrders()
       )
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(orderChannel);
       supabase.removeChannel(itemsChannel);
     };
@@ -125,21 +117,32 @@ export default function KitchenDisplay() {
   // Update order status
   const updateStatus = async (orderId: string, nextStatus: Order['status']) => {
     try {
-      const { error: patchError } = await supabase
+      const { data: updated, error: patchError } = await supabase
         .from('orders')
         .update({ status: nextStatus })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select('id, status')
+        .single();
 
       if (patchError) throw patchError;
-      
-      // Update local state immediately
+      if (!updated) {
+        throw new Error(
+          t(
+            'Status not saved. Run supabase_fix_kitchen_tracking.sql in Supabase SQL Editor.',
+            'ሁኔታ አልተቀመጠም። በ Supabase SQL Editor ውስጥ supabase_fix_kitchen_tracking.sql ያስገቡ።'
+          )
+        );
+      }
+
       setOrders((prev) =>
         prev
           .map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
           .filter((o) => o.status !== 'served' && o.status !== 'cancelled')
       );
-    } catch (err: any) {
-      alert('Failed to update status: ' + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(t('Failed to update status: ', 'ሁኔታ ማዘመን አልተሳካም፡ ') + message);
+      fetchActiveOrders();
     }
   };
 
@@ -209,6 +212,19 @@ export default function KitchenDisplay() {
           </button>
         </div>
       </header>
+
+      {error && (
+        <div className="mx-6 mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+          <p className="font-bold">{t('Kitchen cannot load orders', 'ማእድ ቤት ትዕዛዞችን ማንበብ አልቻለም')}</p>
+          <p className="mt-1">{error}</p>
+          <p className="mt-2 text-slate-400">
+            {t(
+              'Fix: Supabase → SQL Editor → run file supabase_fix_kitchen_tracking.sql',
+              'መፍትሄ፡ Supabase → SQL Editor → supabase_fix_kitchen_tracking.sql ፋይሉን ያስገቡ'
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Main Board Columns */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 p-6 overflow-hidden h-[calc(100vh-73px)]">
